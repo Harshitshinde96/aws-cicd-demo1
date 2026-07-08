@@ -1,3 +1,9 @@
-marks=[2,6,4,5,3]
+import json
 
-print(max(marks))
+with open("students.json", "r") as f:
+    students = json.load(f)
+
+topper = max(students, key=lambda x: x["marks"])
+
+print("Topper:", topper["name"])
+print("Marks:", topper["marks"])
