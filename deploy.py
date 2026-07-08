@@ -33,8 +33,9 @@ try:
     # UPDATED COMMANDS: Idempotent execution (Clones if missing, Pulls if exists)
     # Be sure to replace YOUR_GITHUB_USERNAME below!
     commands = [
-        "if [ ! -d '/home/ec2-user/aws-python-deployment-demo' ]; then git clone https://github.com/Harshitshinde96/aws-cicd-demo1.git /home/ec2-user/aws-python-deployment-demo; fi",
-        "cd /home/ec2-user/aws-python-deployment-demo && git pull origin main",
+        # Notice the 2>&1 added to the end of the git commands
+        "if [ ! -d '/home/ec2-user/aws-python-deployment-demo' ]; then git clone https://github.com/Harshitshinde96/aws-cicd-demo1.git /home/ec2-user/aws-python-deployment-demo 2>&1; fi",
+        "cd /home/ec2-user/aws-python-deployment-demo && git pull origin main 2>&1",
         "cd /home/ec2-user/aws-python-deployment-demo && python3 app.py"
     ]
 
