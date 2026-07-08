@@ -2,47 +2,46 @@ import os
 import paramiko
 import io
 import sys
+import warnings
 
-# 1. Fetch Secrets from GitHub Actions Environment
+# Suppress the harmless CryptographyDeprecationWarning from Paramiko
+warnings.filterwarnings(action='ignore', module='.*paramiko.*')
+
 host = os.environ.get("EC2_HOST")
 username = os.environ.get("EC2_USERNAME")
 private_key = os.environ.get("PRIVATE_KEY")
 
 if not all([host, username, private_key]):
-    print("Error: Missing required environment variables (EC2_HOST, EC2_USERNAME, PRIVATE_KEY).")
+    print("Error: Missing required environment variables.")
     sys.exit(1)
 
 print(f"Starting Deployment to {host}...")
 
-# 2. Load the private key from string memory securely
 try:
     key = paramiko.RSAKey.from_private_key(io.StringIO(private_key))
 except Exception as e:
     print(f"Error parsing private key: {e}")
     sys.exit(1)
 
-# 3. Initialize SSH Client
 client = paramiko.SSHClient()
 client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
 try:
-    # 4. Connect to EC2
     client.connect(hostname=host, username=username, pkey=key)
     print("SSH Connection Established Successfully.")
 
-    # 5. Define Commands to run on the server
+    # UPDATED COMMANDS: Idempotent execution (Clones if missing, Pulls if exists)
+    # Be sure to replace YOUR_GITHUB_USERNAME below!
     commands = [
-        "cd /home/ec2-user/aws-python-deployment-demo",
-        "git pull origin main",
-        "python3 app.py"
+        "if [ ! -d '/home/ec2-user/aws-python-deployment-demo' ]; then git clone https://github.com/Harshitshinde96/aws-cicd-demo1.git /home/ec2-user/aws-python-deployment-demo; fi",
+        "cd /home/ec2-user/aws-python-deployment-demo && git pull origin main",
+        "cd /home/ec2-user/aws-python-deployment-demo && python3 app.py"
     ]
 
-    # 6. Execute Commands
     for command in commands:
         print(f"\nExecuting: {command}")
         stdin, stdout, stderr = client.exec_command(command)
         
-        # Read standard output and error streams
         out = stdout.read().decode().strip()
         err = stderr.read().decode().strip()
         
@@ -50,6 +49,11 @@ try:
             print(out)
         if err:
             print(f"WARNING/ERROR: {err}")
+            
+        # FIX FOR THE 'NONETYPE' CRASH: Explicitly close the streams
+        stdin.close()
+        stdout.close()
+        stderr.close()
 
     print("\nDeployment Completed Successfully!")
 
